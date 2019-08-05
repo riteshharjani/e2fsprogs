@@ -262,6 +262,8 @@ struct e2fsck_fc_replay_state {
 };
 
 struct e2fsck_struct {
+	/* Global context to get the cancel flag */
+	e2fsck_t global_ctx;
 	ext2_filsys fs;
 	const char *program_name;
 	char *filesystem_name;
