@@ -2164,6 +2164,8 @@ static errcode_t e2fsck_pass1_thread_prepare(e2fsck_t global_ctx, e2fsck_t *thre
 	thread_context->fs->priv_data = thread_context;
 	thread_context->global_ctx = global_ctx;
 
+	thread_context->thread_index = 0;
+	set_up_logging(thread_context);
 	*thread_ctx = thread_context;
 	return 0;
 }
@@ -2171,6 +2173,8 @@ static errcode_t e2fsck_pass1_thread_prepare(e2fsck_t global_ctx, e2fsck_t *thre
 static int e2fsck_pass1_thread_join(e2fsck_t global_ctx, e2fsck_t thread_ctx)
 {
 	int flags = global_ctx->flags;
+	FILE *global_logf = global_ctx->logf;
+	FILE *global_problem_logf = global_ctx->problem_logf;
 #ifdef HAVE_SETJMP_H
 	jmp_buf old_jmp;
 
@@ -2185,6 +2189,14 @@ static int e2fsck_pass1_thread_join(e2fsck_t global_ctx, e2fsck_t thread_ctx)
 			     (global_ctx->flags & E2F_FLAG_SIGNAL_MASK);
 
 	global_ctx->fs->priv_data = global_ctx;
+	global_ctx->logf = global_logf;
+	global_ctx->problem_logf = global_problem_logf;
+	if (thread_ctx->logf)
+		fclose(thread_ctx->logf);
+	if (thread_ctx->problem_logf) {
+		fputs("</problem_log>\n", thread_ctx->problem_logf);
+		fclose(thread_ctx->problem_logf);
+	}
 	ext2fs_free_mem(&thread_ctx);
 	return 0;
 }
