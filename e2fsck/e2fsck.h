@@ -488,6 +488,7 @@ struct e2fsck_struct {
 
 #ifdef HAVE_PTHREAD
 	__u32			 fs_num_threads;
+	__u32			 mmp_update_thread;
 	int			 fs_need_locking;
 	/* serialize fix operation for multiple threads */
 	pthread_rwlock_t	 fs_fix_rwlock;
