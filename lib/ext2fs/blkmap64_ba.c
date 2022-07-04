@@ -40,6 +40,13 @@ struct ext2fs_ba_private_struct {
 
 typedef struct ext2fs_ba_private_struct *ext2fs_ba_private;
 
+#define ba_bits_size(start, end) ((((end) - (start)) / 8 + 1))
+
+static size_t ba_bitmap_size(ext2fs_generic_bitmap_64 bitmap)
+{
+	return (size_t) ba_bits_size(bitmap->start, bitmap->real_end);
+}
+
 static errcode_t ba_alloc_private_data (ext2fs_generic_bitmap_64 bitmap)
 {
 	ext2fs_ba_private bp;
@@ -56,7 +63,7 @@ static errcode_t ba_alloc_private_data (ext2fs_generic_bitmap_64 bitmap)
 	if (retval)
 		return retval;
 
-	size = (size_t) (((bitmap->real_end - bitmap->start) / 8) + 1);
+	size = ba_bitmap_size(bitmap);
 
 	retval = ext2fs_get_mem(size, &bp->bitarray);
 	if (retval) {
@@ -80,7 +87,7 @@ static errcode_t ba_new_bmap(ext2_filsys fs EXT2FS_ATTR((unused)),
 		return retval;
 
 	bp = (ext2fs_ba_private) bitmap->private;
-	size = (size_t) (((bitmap->real_end - bitmap->start) / 8) + 1);
+	size = ba_bitmap_size(bitmap);
 	memset(bp->bitarray, 0, size);
 
 	return 0;
@@ -115,7 +122,7 @@ static errcode_t ba_copy_bmap(ext2fs_generic_bitmap_64 src,
 
 	dest_bp = (ext2fs_ba_private) dest->private;
 
-	size = (size_t) (((src->real_end - src->start) / 8) + 1);
+	size = ba_bitmap_size(src);
 	memcpy (dest_bp->bitarray, src_bp->bitarray, size);
 
 	return 0;
@@ -145,8 +152,8 @@ static errcode_t ba_resize_bmap(ext2fs_generic_bitmap_64 bmap,
 		return 0;
 	}
 
-	size = ((bmap->real_end - bmap->start) / 8) + 1;
-	new_size = ((new_real_end - bmap->start) / 8) + 1;
+	size = ba_bitmap_size(bmap);
+	new_size = ba_bits_size(new_real_end, bmap->start);
 
 	if (size != new_size) {
 		retval = ext2fs_resize_mem(size, new_size, &bp->bitarray);
@@ -306,8 +313,7 @@ static void ba_clear_bmap(ext2fs_generic_bitmap_64 bitmap)
 {
 	ext2fs_ba_private bp = (ext2fs_ba_private) bitmap->private;
 
-	memset(bp->bitarray, 0,
-	       (size_t) (((bitmap->real_end - bitmap->start) / 8) + 1));
+	memset(bp->bitarray, 0, ba_bitmap_size(bitmap));
 }
 
 #ifdef ENABLE_BMAP_STATS
