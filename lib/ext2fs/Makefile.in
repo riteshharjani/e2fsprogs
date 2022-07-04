@@ -227,6 +227,7 @@ SRCS= ext2_err.c \
 	$(srcdir)/write_bb_file.c \
 	$(srcdir)/rbtree.c \
 	$(srcdir)/tst_libext2fs.c \
+	$(srcdir)/tst_bitmaps_standalone.c \
 	$(DEBUG_SRCS)
 
 HFILES= bitops.h ext2fs.h ext2_io.h ext2_fs.h ext2_ext_attr.h ext3_extents.h \
@@ -328,9 +329,9 @@ tst_getsectsize: tst_getsectsize.o getsectsize.o $(STATIC_LIBEXT2FS) \
 		$(ALL_LDFLAGS) $(STATIC_LIBEXT2FS) $(STATIC_LIBCOM_ERR) \
 		$(SYSLIBS)
 
-tst_types.o: $(srcdir)/tst_types.c ext2_types.h 
+tst_types.o: $(srcdir)/tst_types.c ext2_types.h
 
-tst_types: tst_types.o ext2_types.h 
+tst_types: tst_types.o ext2_types.h
 	$(E) "	LD $@"
 	$(Q) $(CC) -o tst_types tst_types.o $(ALL_LDFLAGS) $(SYSLIBS)
 
@@ -361,6 +362,11 @@ tst_sha512: $(srcdir)/sha512.c $(srcdir)/ext2_fs.h
 	$(E) "	CC $@"
 	$(Q) $(CC) $(ALL_LDFLAGS) $(ALL_CFLAGS) -o tst_sha512 \
 		$(srcdir)/sha512.c -DUNITTEST $(SYSLIBS)
+
+tst_bitmaps_standalone: tst_bitmaps_standalone.o $(STATIC_LIBEXT2FS) $(DEPSTATIC_LIBCOM_ERR)
+	$(E) "	LD $@"
+	$(Q) $(CC) -o tst_bitmaps_standalone tst_bitmaps_standalone.o $(ALL_LDFLAGS) \
+		$(STATIC_LIBEXT2FS) $(STATIC_LIBCOM_ERR) $(SYSLIBS)
 
 ext2_tdbtool: tdbtool.o
 	$(E) "	LD $@"
@@ -533,7 +539,7 @@ mkjournal: mkjournal.c $(STATIC_LIBEXT2FS) $(DEPLIBCOM_ERR)
 fullcheck check:: tst_bitops tst_badblocks tst_iscan tst_types tst_icount \
     tst_super_size tst_types tst_inode_size tst_csum tst_crc32c tst_bitmaps \
     tst_inline tst_inline_data tst_libext2fs tst_sha256 tst_sha512 \
-    tst_digest_encode tst_getsize tst_getsectsize
+    tst_digest_encode tst_getsize tst_getsectsize tst_bitmaps_standalone
 	$(TESTENV) ./tst_bitops
 	$(TESTENV) ./tst_badblocks
 	$(TESTENV) ./tst_iscan
@@ -556,6 +562,7 @@ fullcheck check:: tst_bitops tst_badblocks tst_iscan tst_types tst_icount \
 	$(TESTENV) ./tst_bitmaps -l -f $(srcdir)/tst_bitmaps_cmds > tst_bitmaps_out
 	diff $(srcdir)/tst_bitmaps_exp tst_bitmaps_out
 	$(TESTENV) ./tst_digest_encode
+	$(TESTENV) ./tst_bitmaps_standalone
 
 installdirs::
 	$(E) "	MKDIR_P $(libdir) $(includedir)/ext2fs"
@@ -581,7 +588,7 @@ install:: all $(HFILES) $(HFILES_IN) installdirs ext2fs.pc
 uninstall::
 	$(RM) -f $(DESTDIR)$(libdir)/libext2fs.a \
 		$(DESTDIR)$(pkgconfigdir)/ext2fs.pc
-	$(RM) -rf $(DESTDIR)$(includedir)/ext2fs 
+	$(RM) -rf $(DESTDIR)$(includedir)/ext2fs
 
 clean::
 	$(RM) -f \#* *.s *.o *.a *~ *.bak core profiled/* \
@@ -590,7 +597,7 @@ clean::
 		tst_bitops tst_types tst_icount tst_super_size tst_csum \
 		tst_bitmaps tst_bitmaps_out tst_extents tst_inline \
 		tst_inline_data tst_inode_size tst_bitmaps_cmd.c \
-		tst_digest_encode tst_sha256 tst_sha512 \
+		tst_digest_encode tst_sha256 tst_sha512  tst_bitmaps_standalone \
 		ext2_tdbtool mkjournal debug_cmds.c tst_cmds.c extent_cmds.c \
 		../libext2fs.a ../libext2fs_p.a ../libext2fs_chk.a \
 		crc32c_table.h gen_crc32ctable tst_crc32c tst_libext2fs \
@@ -646,7 +653,7 @@ windows_io.o: $(srcdir)/windows_io.c $(top_builddir)/lib/config.h \
  $(srcdir)/ext2_ext_attr.h $(srcdir)/bitops.h $(srcdir)/ext2fsP.h
 
 # +++ Dependency line eater +++
-# 
+#
 # Makefile dependencies follow.  This must be the last section in
 # the Makefile.in file
 #
@@ -1151,6 +1158,12 @@ tst_getsize.o: $(srcdir)/tst_getsize.c $(top_builddir)/lib/config.h \
  $(srcdir)/ext2_io.h $(top_builddir)/lib/ext2fs/ext2_err.h \
  $(srcdir)/ext2_ext_attr.h $(srcdir)/hashmap.h $(srcdir)/bitops.h
 tst_iscan.o: $(srcdir)/tst_iscan.c $(top_builddir)/lib/config.h \
+ $(top_builddir)/lib/dirpaths.h $(srcdir)/ext2_fs.h \
+ $(top_builddir)/lib/ext2fs/ext2_types.h $(srcdir)/ext2fs.h \
+ $(srcdir)/ext2_fs.h $(srcdir)/ext3_extents.h $(top_srcdir)/lib/et/com_err.h \
+ $(srcdir)/ext2_io.h $(top_builddir)/lib/ext2fs/ext2_err.h \
+ $(srcdir)/ext2_ext_attr.h $(srcdir)/hashmap.h $(srcdir)/bitops.h
+tst_bitmaps_standalone.o: $(srcdir)/tst_bitmaps_standalone.c $(top_builddir)/lib/config.h \
  $(top_builddir)/lib/dirpaths.h $(srcdir)/ext2_fs.h \
  $(top_builddir)/lib/ext2fs/ext2_types.h $(srcdir)/ext2fs.h \
  $(srcdir)/ext2_fs.h $(srcdir)/ext3_extents.h $(top_srcdir)/lib/et/com_err.h \
