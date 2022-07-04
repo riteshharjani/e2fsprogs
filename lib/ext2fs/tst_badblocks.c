@@ -119,6 +119,40 @@ static void print_list(badblocks_list bb, int verify)
 	}
 }
 
+static void do_list_merge_verify(badblocks_list bb, badblocks_list bbm, int verify)
+{
+	errcode_t retval;
+	badblocks_iterate iter;
+	blk_t blk;
+	int i, ok;
+
+	retval = ext2fs_badblocks_merge(bb, bbm);
+	if (retval) {
+		com_err("do_list_merge_verify", retval, "while doing list merge");
+		return;
+	}
+
+	if (!verify)
+		return;
+
+	retval = ext2fs_badblocks_list_iterate_begin(bb, &iter);
+	if (retval) {
+		com_err("do_list_merge_verify", retval, "while setting up iterator");
+		return;
+	}
+
+	while (ext2fs_badblocks_list_iterate(iter, &blk)) {
+		retval = ext2fs_badblocks_list_test(bbm, blk);
+		if (retval == 0) {
+			printf(" --- NOT OK\n");
+			test_fail++;
+			return;
+		}
+	}
+	ext2fs_badblocks_list_iterate_end(iter);
+	printf(" --- OK\n");
+}
+
 static void validate_test_seq(badblocks_list bb, blk_t *vec)
 {
 	int	i, match, ok;
@@ -275,13 +309,13 @@ out:
 
 int main(int argc, char **argv)
 {
-	badblocks_list bb1, bb2, bb3, bb4, bb5;
+	badblocks_list bb1, bb2, bb3, bb4, bb5, bbm;
 	int	equal;
 	errcode_t	retval;
 
 	add_error_table(&et_ext2_error_table);
 
-	bb1 = bb2 = bb3 = bb4 = bb5 = 0;
+	bb1 = bb2 = bb3 = bb4 = bb5 = bbm = 0;
 
 	printf("test1: ");
 	retval = create_test_list(test1, &bb1);
@@ -346,6 +380,27 @@ int main(int argc, char **argv)
 		printf("\n");
 	}
 
+	printf("Create merge bb list\n");
+	retval = ext2fs_badblocks_list_create(&bbm, 5);
+	if (retval) {
+		com_err("ext2fs_badblocks_list_create", retval, "while creating list");
+		test_fail++;
+	}
+
+	printf("Merge & Verify all bb{1..5} into bbm\n");
+	if (bb1 && bb2 && bb3 && bb4 && bb5 && bbm) {
+		printf("Merge bb1 into bbm");
+		do_list_merge_verify(bb1, bbm, 1);
+		printf("Merge bb2 into bbm");
+		do_list_merge_verify(bb2, bbm, 1);
+		printf("Merge bb3 into bbm");
+		do_list_merge_verify(bb3, bbm, 1);
+		printf("Merge bb4 into bbm");
+		do_list_merge_verify(bb4, bbm, 1);
+		printf("Merge bb5 into bbm");
+		do_list_merge_verify(bb5, bbm, 1);
+	}
+
 	file_test(bb4);
 
 	file_test_invalid(bb4);
@@ -363,6 +418,8 @@ int main(int argc, char **argv)
 		ext2fs_badblocks_list_free(bb4);
 	if (bb5)
 		ext2fs_badblocks_list_free(bb5);
+	if (bbm)
+		ext2fs_badblocks_list_free(bbm);
 
 	return test_fail;
 
