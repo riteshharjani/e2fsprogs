@@ -385,10 +385,13 @@ errcode_t ext2fs_compare_generic_bitmap(errcode_t magic, errcode_t neq,
 		    (size_t) (bm1->end - bm1->start)/8)))
 		return neq;
 
-	for (i = bm1->end - ((bm1->end - bm1->start) % 8); i <= bm1->end; i++)
-		if (ext2fs_fast_test_block_bitmap(gen_bm1, i) !=
-		    ext2fs_fast_test_block_bitmap(gen_bm2, i))
+	for (i = bm1->start; i <= bm1->end; i++) {
+		int ret1, ret2;
+		ret1 = !!ext2fs_fast_test_block_bitmap(gen_bm1, i);
+		ret2 = !!ext2fs_fast_test_block_bitmap(gen_bm2, i);
+		if (ret1 != ret2)
 			return neq;
+	}
 
 	return 0;
 }
