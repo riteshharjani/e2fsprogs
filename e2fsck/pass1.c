@@ -50,6 +50,7 @@
 #ifdef HAVE_PTHREAD
 #include <pthread.h>
 #endif
+#include <assert.h>
 
 #include "e2fsck.h"
 #include <ext2fs/ext2_ext_attr.h>
@@ -2154,6 +2155,26 @@ endit:
 }
 
 #ifdef HAVE_PTHREAD
+static errcode_t e2fsck_pass1_merge_bitmap(ext2_filsys fs, ext2fs_generic_bitmap *src,
+					  ext2fs_generic_bitmap *dest)
+{
+	errcode_t ret = 0;
+
+	if (*src) {
+		if (*dest == NULL) {
+			*dest = *src;
+			*src = NULL;
+		} else {
+			ret = ext2fs_merge_bitmap(*src, *dest, NULL, NULL);
+			if (ret)
+				return ret;
+		}
+		(*dest)->fs = fs;
+	}
+
+	return 0;
+}
+
 static errcode_t e2fsck_open_channel_fs(ext2_filsys dest, e2fsck_t dest_context, ext2_filsys src)
 {
 	errcode_t retval;
@@ -2184,6 +2205,19 @@ static errcode_t e2fsck_pass1_thread_prepare(e2fsck_t global_ctx, e2fsck_t *thre
 	e2fsck_t thread_context;
 	ext2_filsys thread_fs;
 	ext2_filsys global_fs = global_ctx->fs;
+
+	assert(global_ctx->inode_used_map == NULL);
+	assert(global_ctx->inode_dir_map == NULL);
+	assert(global_ctx->inode_bb_map == NULL);
+	assert(global_ctx->inode_imagic_map == NULL);
+	assert(global_ctx->inode_reg_map == NULL);
+	assert(global_ctx->inodes_to_rebuild == NULL);
+
+	assert(global_ctx->block_found_map == NULL);
+	assert(global_ctx->block_dup_map == NULL);
+	assert(global_ctx->block_ea_map == NULL);
+	assert(global_ctx->block_metadata_map == NULL);
+	assert(global_ctx->fs->dblist == NULL);
 
 	retval = ext2fs_get_mem(sizeof(struct e2fsck_struct), &thread_context);
 	if (retval) {
@@ -2225,6 +2259,18 @@ static int e2fsck_pass1_thread_join_one(e2fsck_t global_ctx, e2fsck_t thread_ctx
 	FILE *global_problem_logf = global_ctx->problem_logf;
 	ext2_filsys thread_fs = thread_ctx->fs;
 	ext2_filsys global_fs = global_ctx->fs;
+	ext2fs_inode_bitmap inode_bad_map = global_ctx->inode_bad_map;
+	ext2fs_inode_bitmap inode_used_map = global_ctx->inode_used_map;
+	ext2fs_inode_bitmap inode_dir_map = global_ctx->inode_dir_map;
+	ext2fs_inode_bitmap inode_bb_map = global_ctx->inode_bb_map;
+	ext2fs_inode_bitmap inode_imagic_map = global_ctx->inode_imagic_map;
+	ext2fs_inode_bitmap inode_reg_map = global_ctx->inode_reg_map;
+	ext2fs_block_bitmap block_found_map = global_ctx->block_found_map;
+	ext2fs_block_bitmap block_dup_map = global_ctx->block_dup_map;
+	ext2fs_block_bitmap block_ea_map = global_ctx->block_ea_map;
+	ext2fs_block_bitmap block_metadata_map = global_ctx->block_metadata_map;
+	ext2fs_block_bitmap inodes_to_rebuild = global_ctx->inodes_to_rebuild;
+
 #ifdef HAVE_SETJMP_H
 	jmp_buf old_jmp;
 
@@ -2234,6 +2280,19 @@ static int e2fsck_pass1_thread_join_one(e2fsck_t global_ctx, e2fsck_t thread_ctx
 #ifdef HAVE_SETJMP_H
 	memcpy(global_ctx->abort_loc, old_jmp, sizeof(jmp_buf));
 #endif
+
+	global_ctx->inode_used_map = inode_used_map;
+	global_ctx->inode_bad_map = inode_bad_map;
+	global_ctx->inode_dir_map = inode_dir_map;
+	global_ctx->inode_bb_map = inode_bb_map;
+	global_ctx->inode_imagic_map = inode_imagic_map;
+	global_ctx->inodes_to_rebuild = inodes_to_rebuild;
+	global_ctx->inode_reg_map = inode_reg_map;
+	global_ctx->block_found_map = block_found_map;
+	global_ctx->block_dup_map = block_dup_map;
+	global_ctx->block_ea_map = block_ea_map;
+	global_ctx->block_metadata_map = block_metadata_map;
+
 	/* Keep the global singal flags*/
 	global_ctx->flags |= (flags & E2F_FLAG_SIGNAL_MASK) |
 			     (global_ctx->flags & E2F_FLAG_SIGNAL_MASK);
@@ -2248,6 +2307,63 @@ static int e2fsck_pass1_thread_join_one(e2fsck_t global_ctx, e2fsck_t thread_ctx
 		com_err(global_ctx->program_name, 0, _("while merging fs\n"));
 		return retval;
 	}
+	retval = e2fsck_pass1_merge_bitmap(global_fs,
+				&thread_ctx->inode_used_map,
+				&global_ctx->inode_used_map);
+	if (retval)
+		return retval;
+
+	retval = e2fsck_pass1_merge_bitmap(global_fs,
+				&thread_ctx->inode_bad_map,
+				&global_ctx->inode_bad_map);
+	if (retval)
+		return retval;
+	retval = e2fsck_pass1_merge_bitmap(global_fs,
+					&thread_ctx->inode_dir_map,
+					&global_ctx->inode_dir_map);
+	if (retval)
+		return retval;
+	retval = e2fsck_pass1_merge_bitmap(global_fs,
+				&thread_ctx->inode_bb_map,
+				&global_ctx->inode_bb_map);
+	if (retval)
+		return retval;
+	retval = e2fsck_pass1_merge_bitmap(global_fs,
+				&thread_ctx->inode_imagic_map,
+				&global_ctx->inode_imagic_map);
+	if (retval)
+		return retval;
+	retval = e2fsck_pass1_merge_bitmap(global_fs,
+				&thread_ctx->inode_reg_map,
+				&global_ctx->inode_reg_map);
+	if (retval)
+		return retval;
+	retval = e2fsck_pass1_merge_bitmap(global_fs,
+				&thread_ctx->inodes_to_rebuild,
+				&global_ctx->inodes_to_rebuild);
+	if (retval)
+		return retval;
+	retval = e2fsck_pass1_merge_bitmap(global_fs,
+				&thread_ctx->block_found_map,
+				&global_ctx->block_found_map);
+	if (retval)
+		return retval;
+	retval = e2fsck_pass1_merge_bitmap(global_fs,
+				&thread_ctx->block_dup_map,
+				&global_ctx->block_dup_map);
+	if (retval)
+		return retval;
+	retval = e2fsck_pass1_merge_bitmap(global_fs,
+				&thread_ctx->block_ea_map,
+				&global_ctx->block_ea_map);
+	if (retval)
+		return retval;
+	retval = e2fsck_pass1_merge_bitmap(global_fs,
+				&thread_ctx->block_metadata_map,
+				&global_ctx->block_metadata_map);
+	if (retval)
+		return retval;
+
 	return retval;
 }
 
@@ -2256,6 +2372,18 @@ static int e2fsck_pass1_thread_join(e2fsck_t global_ctx, e2fsck_t thread_ctx)
 	errcode_t retval;
 
 	retval = e2fsck_pass1_thread_join_one(global_ctx, thread_ctx);
+	e2fsck_pass1_free_bitmap(&thread_ctx->inode_used_map);
+	e2fsck_pass1_free_bitmap(&thread_ctx->inode_bad_map);
+	e2fsck_pass1_free_bitmap(&thread_ctx->inode_dir_map);
+	e2fsck_pass1_free_bitmap(&thread_ctx->inode_bb_map);
+	e2fsck_pass1_free_bitmap(&thread_ctx->inode_imagic_map);
+	e2fsck_pass1_free_bitmap(&thread_ctx->inode_reg_map);
+	e2fsck_pass1_free_bitmap(&thread_ctx->inodes_to_rebuild);
+	e2fsck_pass1_free_bitmap(&thread_ctx->block_found_map);
+	e2fsck_pass1_free_bitmap(&thread_ctx->block_dup_map);
+	e2fsck_pass1_free_bitmap(&thread_ctx->block_ea_map);
+	e2fsck_pass1_free_bitmap(&thread_ctx->block_metadata_map);
+
 	if (thread_ctx->logf)
 		fclose(thread_ctx->logf);
 	if (thread_ctx->problem_logf) {
