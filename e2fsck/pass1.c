@@ -2154,10 +2154,36 @@ endit:
 }
 
 #ifdef HAVE_PTHREAD
+static errcode_t e2fsck_open_channel_fs(ext2_filsys dest, e2fsck_t dest_context, ext2_filsys src)
+{
+	errcode_t retval;
+
+	io_channel_flush_cleanup(src->io);
+	retval = dest->io->manager->open(dest->device_name,
+									 IO_FLAG_RW | IO_FLAG_THREADS, &dest->io);
+	if (retval)
+		return retval;
+	dest->image_io = dest->io;
+	dest->io->app_data = dest;
+	/* Block size might not be default */
+	io_channel_set_blksize(dest->io, src->io->block_size);
+	ehandler_init(dest->io);
+
+	dest->priv_data = dest_context;
+	dest_context->fs = dest;
+	/* The data should be written to disk immediately */
+	dest->io->flags |= CHANNEL_FLAGS_WRITETHROUGH;
+	/* icache will be rebuilt if needed, so do not copy from @src */
+	src->icache = NULL;
+	return 0;
+}
+
 static errcode_t e2fsck_pass1_thread_prepare(e2fsck_t global_ctx, e2fsck_t *thread_ctx)
 {
 	errcode_t retval;
 	e2fsck_t thread_context;
+	ext2_filsys thread_fs;
+	ext2_filsys global_fs = global_ctx->fs;
 
 	retval = ext2fs_get_mem(sizeof(struct e2fsck_struct), &thread_context);
 	if (retval) {
@@ -2165,13 +2191,30 @@ static errcode_t e2fsck_pass1_thread_prepare(e2fsck_t global_ctx, e2fsck_t *thre
 		return retval;
 	}
 	memcpy(thread_context, global_ctx, sizeof(struct e2fsck_struct));
-	thread_context->fs->priv_data = thread_context;
 	thread_context->global_ctx = global_ctx;
+	retval = ext2fs_clone_fs(global_fs, &thread_fs,
+							 EXT2FS_CLONE_BLOCK | EXT2FS_CLONE_INODE |
+							 EXT2FS_CLONE_BADBLOCKS | EXT2FS_CLONE_DBLIST);
+	if (retval) {
+		com_err(global_ctx->program_name, retval, "while allocating memory");
+		goto out_context;
+	}
+
+	retval = e2fsck_open_channel_fs(thread_fs, thread_context, global_fs);
+	if (retval) {
+		com_err(global_ctx->program_name, retval, "while copying fs");
+		goto out_fs;
+	}
 
 	thread_context->thread_index = 0;
 	set_up_logging(thread_context);
 	*thread_ctx = thread_context;
 	return 0;
+out_fs:
+	ext2fs_merge_fs(&thread_fs);
+out_context:
+	ext2fs_free_mem(&thread_context);
+	return retval;
 }
 
 static int e2fsck_pass1_thread_join_one(e2fsck_t global_ctx, e2fsck_t thread_ctx)
@@ -2180,6 +2223,8 @@ static int e2fsck_pass1_thread_join_one(e2fsck_t global_ctx, e2fsck_t thread_ctx
 	int flags = global_ctx->flags;
 	FILE *global_logf = global_ctx->logf;
 	FILE *global_problem_logf = global_ctx->problem_logf;
+	ext2_filsys thread_fs = thread_ctx->fs;
+	ext2_filsys global_fs = global_ctx->fs;
 #ifdef HAVE_SETJMP_H
 	jmp_buf old_jmp;
 
@@ -2192,10 +2237,17 @@ static int e2fsck_pass1_thread_join_one(e2fsck_t global_ctx, e2fsck_t thread_ctx
 	/* Keep the global singal flags*/
 	global_ctx->flags |= (flags & E2F_FLAG_SIGNAL_MASK) |
 			     (global_ctx->flags & E2F_FLAG_SIGNAL_MASK);
-
-	global_ctx->fs->priv_data = global_ctx;
 	global_ctx->logf = global_logf;
 	global_ctx->problem_logf = global_problem_logf;
+
+	global_fs->priv_data = global_ctx;
+	global_ctx->fs = global_fs;
+
+	retval = ext2fs_merge_fs(&(thread_ctx->fs));
+	if (retval) {
+		com_err(global_ctx->program_name, 0, _("while merging fs\n"));
+		return retval;
+	}
 	return retval;
 }
 
