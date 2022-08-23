@@ -2174,8 +2174,9 @@ static errcode_t e2fsck_pass1_thread_prepare(e2fsck_t global_ctx, e2fsck_t *thre
 	return 0;
 }
 
-static int e2fsck_pass1_thread_join(e2fsck_t global_ctx, e2fsck_t thread_ctx)
+static int e2fsck_pass1_thread_join_one(e2fsck_t global_ctx, e2fsck_t thread_ctx)
 {
+	errcode_t retval = 0;
 	int flags = global_ctx->flags;
 	FILE *global_logf = global_ctx->logf;
 	FILE *global_problem_logf = global_ctx->problem_logf;
@@ -2195,6 +2196,14 @@ static int e2fsck_pass1_thread_join(e2fsck_t global_ctx, e2fsck_t thread_ctx)
 	global_ctx->fs->priv_data = global_ctx;
 	global_ctx->logf = global_logf;
 	global_ctx->problem_logf = global_problem_logf;
+	return retval;
+}
+
+static int e2fsck_pass1_thread_join(e2fsck_t global_ctx, e2fsck_t thread_ctx)
+{
+	errcode_t retval;
+
+	retval = e2fsck_pass1_thread_join_one(global_ctx, thread_ctx);
 	if (thread_ctx->logf)
 		fclose(thread_ctx->logf);
 	if (thread_ctx->problem_logf) {
@@ -2202,7 +2211,7 @@ static int e2fsck_pass1_thread_join(e2fsck_t global_ctx, e2fsck_t thread_ctx)
 		fclose(thread_ctx->problem_logf);
 	}
 	ext2fs_free_mem(&thread_ctx);
-	return 0;
+	return retval;
 }
 
 static int e2fsck_pass1_threads_join(struct e2fsck_thread_info *infos,
@@ -2226,7 +2235,13 @@ static int e2fsck_pass1_threads_join(struct e2fsck_thread_info *infos,
 			if (ret == 0)
 				ret = rc;
 		}
-		e2fsck_pass1_thread_join(global_ctx, infos[i].eti_thread_ctx);
+		rc = e2fsck_pass1_thread_join(global_ctx, infos[i].eti_thread_ctx);
+		if (rc) {
+			com_err(global_ctx->program_name, rc,
+				_("while joining pass1 thread\n"));
+			if (ret == 0)
+				ret = rc;
+		}
 	}
 	free(infos);
 
