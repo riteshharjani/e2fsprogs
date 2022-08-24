@@ -2514,7 +2514,6 @@ static errcode_t e2fsck_open_channel_fs(ext2_filsys dest, e2fsck_t dest_context,
 	assert(dest->io->flags == src->io->flags);
 	assert(dest->io->app_data == dest);
 	assert(src->io->app_data == src);
-	assert(dest->io->align == src->io->align);
 
 	dest->priv_data = dest_context;
 	dest_context->fs = dest;
