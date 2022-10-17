@@ -34,6 +34,8 @@ set_super_value free_blocks_count 156
 q
 EOF
 
+cp $TMPFILE ${TMPFILE}_mt
+
 . $cmd_dir/run_e2fsck
 
 rm -f $TEST_DATA

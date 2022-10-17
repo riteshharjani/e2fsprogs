@@ -19,6 +19,8 @@ set_inode_field debugfs mtime 20050411000000
 q
 EOF
 
+cp $TMPFILE ${TMPFILE}_mt
+
 E2FSCK_TIME=1113200000
 export E2FSCK_TIME
 

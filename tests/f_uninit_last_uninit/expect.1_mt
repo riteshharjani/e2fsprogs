@@ -1,0 +1,13 @@
+Last group block bitmap uninitialized.  Fix? yes
+
+Pass 1: Checking inodes, blocks, and sizes
+[Thread 0] Scan group range [0, 1)
+[Thread 1] Scan group range [1, 2)
+[Thread 0] Scanned group range [0, 1), inodes 11
+[Thread 1] Scanned group range [1, 2), inodes 0
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+test_filesys: 11/32 files (0.0% non-contiguous), 109/10000 blocks
+Exit status is 0

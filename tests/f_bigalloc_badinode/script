@@ -16,6 +16,8 @@ set_inode_field testfile i_mode 0120000
 quit
 EOF
 
+cp $TMPFILE ${TMPFILE}_mt
+
 . $cmd_dir/run_e2fsck
 
 rm -f $TEST_DATA

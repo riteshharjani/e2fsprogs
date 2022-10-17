@@ -1,0 +1,23 @@
+ext2fs_check_desc: Corrupt group descriptor: bad block for block bitmap
+Use max possible thread num: 1 instead
+Pass 1: Checking inodes, blocks, and sizes
+[Thread 0] Scan group range [0, 1)
+[Thread 0] Scanned group range [0, 1), inodes 64
+Relocating group 0's block bitmap to 2...
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+Block bitmap differences:  +(0--10)
+Fix? yes
+
+Free blocks count wrong for group #0 (90, counted=89).
+Fix? yes
+
+Free blocks count wrong (90, counted=89).
+Fix? yes
+
+
+test_filesys: ***** FILE SYSTEM WAS MODIFIED *****
+test_filesys: 11/64 files (0.0% non-contiguous), 11/100 blocks
+Exit status is 1

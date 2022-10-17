@@ -32,6 +32,7 @@ fi
 NUM=$((NUM * 7 / 3))
 echo "mke2fs -b $BSIZE -O dir_index,extent -E no_copy_xattrs -d$SRC -N$NUM $TMPFILE $NUM" >> $OUT
 $MKE2FS -b $BSIZE -O dir_index,extent -E no_copy_xattrs -d$SRC -N$NUM $TMPFILE $NUM >> $OUT 2>&1
+cp $TMPFILE ${TMPFILE}_mt # required for MultiThread test
 rm -r $SRC
 
 # Run e2fsck to convert dir to htree before deleting the files, as mke2fs

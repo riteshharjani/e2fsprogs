@@ -15,6 +15,7 @@ SKIP_GUNZIP=true
 PREP_CMD="$E2IMAGE_EXE -r  $TMPFILE $TMPFILE.raw 2>/dev/null; \
           mv $TMPFILE.raw $TMPFILE"
 
+cp $TMPFILE ${TMPFILE}_mt
 . $cmd_dir/run_e2fsck
 
 else

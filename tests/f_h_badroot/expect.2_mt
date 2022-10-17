@@ -1,0 +1,11 @@
+Pass 1: Checking inodes, blocks, and sizes
+[Thread 0] Scan group range [0, 7)
+[Thread 1] Scan group range [7, 15)
+[Thread 0] Scanned group range [0, 7), inodes 46704
+[Thread 1] Scanned group range [7, 15), inodes 53376
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+test_filesys: 1921/100080 files (0.0% non-contiguous), 13646/15361 blocks
+Exit status is 0
