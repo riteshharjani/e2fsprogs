@@ -1,0 +1,20 @@
+Use max possible thread num: 1 instead
+Pass 1: Checking inodes, blocks, and sizes
+[Thread 0] Scan group range [0, 1)
+[Thread 0] Scanned group range [0, 1), inodes 13
+Pass 2: Checking directory structure
+Encrypted entry 'motd' in /get_shorty (12) is too short.
+Clear? yes
+
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Unattached inode 13
+Connect to /lost+found? yes
+
+Inode 13 ref count is 2, should be 1.  Fix? yes
+
+Pass 5: Checking group summary information
+
+test_filesys: ***** FILE SYSTEM WAS MODIFIED *****
+test_filesys: 13/16 files (0.0% non-contiguous), 24/100 blocks
+Exit status is 1

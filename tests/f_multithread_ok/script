@@ -2,6 +2,7 @@ FSCK_OPT="-fym4"
 SKIP_VERIFY="true"
 ONE_PASS_ONLY="true"
 SKIP_CLEANUP="true"
+SKIP_MT=true
 
 . $cmd_dir/run_e2fsck
 

@@ -1,0 +1,30 @@
+Filesystem did not have a UUID; generating one.
+
+Use max possible thread num: 1 instead
+Pass 1: Checking inodes, blocks, and sizes
+[Thread 0] Scan group range [0, 1)
+[Thread 0] The primary superblock (1) is on the bad block list.
+[Thread 0] 
+If the block is really bad, the filesystem can not be fixed.
+[Thread 0] You can remove this block from the bad block list and hope
+that the block is really OK.  But there are no guarantees.
+
+[Thread 0] Clear? yes
+
+[Thread 0] Block 2 in the primary group descriptors is on the bad block list
+[Thread 0] 
+If the block is really bad, the filesystem can not be fixed.
+[Thread 0] You can remove this block from the bad block list and hope
+that the block is really OK.  But there are no guarantees.
+
+[Thread 0] Clear? yes
+
+[Thread 0] Scanned group range [0, 1), inodes 32
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+
+test_filesys: ***** FILE SYSTEM WAS MODIFIED *****
+test_filesys: 11/32 files (0.0% non-contiguous), 22/100 blocks
+Exit status is 1

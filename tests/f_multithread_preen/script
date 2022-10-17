@@ -1,4 +1,5 @@
 FSCK_OPT="-fp -m1"
 SECOND_FSCK_OPT=-yf
+SKIP_MT=true
 
 . $cmd_dir/run_e2fsck

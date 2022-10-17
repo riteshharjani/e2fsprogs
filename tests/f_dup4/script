@@ -45,6 +45,8 @@ set_inode_field /dir3/foe block[0] 34
 q
 EOF
 
+cp $TMPFILE ${TMPFILE}_mt
+
 E2FSCK_TIME=200704102100
 export E2FSCK_TIME
 

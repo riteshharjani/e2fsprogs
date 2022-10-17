@@ -1,2 +1,3 @@
 FSCK_OPT="-y -E unshare_blocks"
+SKIP_MT=true
 . $cmd_dir/run_e2fsck

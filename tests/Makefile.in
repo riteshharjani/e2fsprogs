@@ -99,7 +99,7 @@ testend: test_one ${TDIR}/image
 	@echo "If all is well, edit ${TDIR}/name and rename ${TDIR}."
 
 clean::
-	$(RM) -f *~ *.log *.new *.failed *.ok *.tmp *.slow
+	$(RM) -f *~ *.log *.new *.failed *.ok *.tmp *.slow *.log_mt *.tmp_mt
 	$(RM) -f test_one test_script mke2fs.conf test_data.tmp
 
 distclean:: clean
