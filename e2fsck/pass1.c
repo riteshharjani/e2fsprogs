@@ -3085,6 +3085,12 @@ static int e2fsck_pass1_thread_join(e2fsck_t global_ctx, e2fsck_t thread_ctx)
 {
 	errcode_t retval;
 
+	log_out(thread_ctx,
+			_("Scanned group range [%u, %u), inodes %u\n"),
+			thread_ctx->thread_info.et_group_start,
+			thread_ctx->thread_info.et_group_end,
+			thread_ctx->thread_info.et_inode_number);
+
 	retval = e2fsck_pass1_merge_context(global_ctx, thread_ctx);
 
 	quota_release_context(&thread_ctx->qctx);
@@ -3176,13 +3182,6 @@ static void *e2fsck_pass1_thread(void *arg)
 	e2fsck_pass1_run(thread_ctx);
 
 out:
-	if (thread_ctx->options & E2F_OPT_MULTITHREAD)
-		log_out(thread_ctx,
-			_("Scanned group range [%u, %u), inodes %u\n"),
-			thread_ctx->thread_info.et_group_start,
-			thread_ctx->thread_info.et_group_end,
-			thread_ctx->thread_info.et_inode_number);
-
 #ifdef DEBUG_THREADS
 	pthread_mutex_lock(&thread_debug->etd_mutex);
 	thread_debug->etd_finished_threads++;
