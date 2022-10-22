@@ -17,8 +17,47 @@
 
 #include <sys/time.h>
 #include <sys/resource.h>
+#ifdef HAVE_PTHREAD
+#include <pthread.h>
+#endif
 
 static const char *operation;
+
+#ifdef HAVE_PTHREAD
+pthread_mutex_t oplock;
+bool lock_init = false;
+
+void mutex_lock()
+{
+	if (lock_init)
+		pthread_mutex_lock(&oplock);
+}
+
+void mutex_unlock()
+{
+	if (lock_init)
+		pthread_mutex_unlock(&oplock);
+}
+
+void mutex_init(io_channel channel)
+{
+	int retval = 0;
+
+	if (lock_init || !(channel->flags & CHANNEL_FLAGS_THREADS))
+		return;
+
+	retval = pthread_mutex_init(&oplock, NULL);
+	if (retval)
+		return;
+
+	lock_init = true;
+}
+#else
+void mutex_init(io_channel channel) {};
+void mutex_lock() {};
+void mutex_unlock() {};
+#endif
+
 
 static errcode_t e2fsck_handle_read_error(io_channel channel,
 					  unsigned long block,
@@ -120,9 +159,13 @@ static errcode_t e2fsck_handle_write_error(io_channel channel,
 
 const char *ehandler_operation(const char *op)
 {
-	const char *ret = operation;
+	const char *ret;
 
+	mutex_lock();
+	ret = operation;
 	operation = op;
+	mutex_unlock();
+
 	return ret;
 }
 
@@ -130,4 +173,5 @@ void ehandler_init(io_channel channel)
 {
 	channel->read_error = e2fsck_handle_read_error;
 	channel->write_error = e2fsck_handle_write_error;
+	mutex_init(channel);
 }
