@@ -2991,7 +2991,7 @@ static errcode_t e2fsck_pass1_merge_context(e2fsck_t global_ctx,
 	global_ctx->large_files += thread_ctx->large_files;
 	/* threads might enable E2F_OPT_YES */
 	global_ctx->options |= thread_ctx->options;
-	global_ctx->flags |= thread_ctx->flags;
+
 	/*
 	 * The l+f inode may have been cleared, so zap it now and
 	 * later passes will recalculate it if necessary
@@ -3102,9 +3102,14 @@ static errcode_t e2fsck_pass1_merge_context(e2fsck_t global_ctx,
 				     global_ctx->block_dup_map,
 				     global_ctx->block_ea_map);
 	e2fsck_pass1_block_map_w_unlock(thread_ctx);
+
+	e2fsck_pass1_check_lock(global_ctx);
+	e2fsck_pass1_fix_lock(global_ctx);
+	global_ctx->flags |= thread_ctx->flags;
 	if (retval == EEXIST)
 		global_ctx->flags |= E2F_FLAG_DUP_BLOCK;
-
+	e2fsck_pass1_fix_unlock(global_ctx);
+	e2fsck_pass1_check_unlock(global_ctx);
 	return retval;
 }
 
@@ -4733,8 +4738,10 @@ static void check_blocks(e2fsck_t ctx, struct problem_context *pctx,
 			}
 		}
 	}
+	e2fsck_pass1_fix_lock(ctx);
 	end_problem_latch(ctx, PR_LATCH_BLOCK);
 	end_problem_latch(ctx, PR_LATCH_TOOBIG);
+	e2fsck_pass1_fix_unlock(ctx);
 	if (e2fsck_should_abort(ctx))
 		goto out;
 	if (pctx->errcode)
