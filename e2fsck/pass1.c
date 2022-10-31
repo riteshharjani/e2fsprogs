@@ -1097,6 +1097,66 @@ out:
 	return 0;
 }
 
+static void pass1_update_mmp_enter(e2fsck_t ctx, ext2_ino_t	ino)
+{
+	ext2_filsys fs = ctx->fs;
+	e2fsck_t global_ctx = ctx->global_ctx ? ctx->global_ctx : ctx;
+	int check_mmp = 0;
+	int set_mmp = 0;
+
+#ifdef HAVE_PTHREAD
+	/* only one active thread could update mmp block. */
+	e2fsck_pass1_block_map_r_lock(ctx);
+	if (!global_ctx->mmp_update_thread)
+		set_mmp = 1;
+	if (global_ctx->mmp_update_thread == ctx->thread_info.et_thread_index + 1)
+		check_mmp = 1;
+	e2fsck_pass1_block_map_r_unlock(ctx);
+
+	if (!check_mmp && !set_mmp)
+		return;
+
+	if (set_mmp) {
+		e2fsck_pass1_block_map_w_lock(ctx);
+		if (!global_ctx->mmp_update_thread) {
+			global_ctx->mmp_update_thread =
+				ctx->thread_info.et_thread_index + 1;
+			check_mmp = 1;
+		}
+		e2fsck_pass1_block_map_w_unlock(ctx);
+	}
+#else
+	check_mmp = 1;
+#endif
+
+	if (check_mmp && (ino % (fs->super->s_inodes_per_group * 4) == 1)) {
+		if (e2fsck_mmp_update(fs))
+			fatal_error(ctx, 0);
+	}
+}
+
+static void pass1_update_mmp_exit(e2fsck_t ctx)
+{
+	ext2_filsys fs = ctx->fs;
+	e2fsck_t global_ctx = ctx->global_ctx ? ctx->global_ctx : ctx;
+	int set_mmp = 0;
+
+#ifdef HAVE_PTHREAD
+	e2fsck_pass1_block_map_r_lock(ctx);
+	if (global_ctx->mmp_update_thread == ctx->thread_info.et_thread_index + 1)
+		set_mmp = 1;
+	e2fsck_pass1_block_map_r_unlock(ctx);
+
+	if (!set_mmp)
+		return;
+
+	/* reset update_thread after this thread exit */
+	e2fsck_pass1_block_map_w_lock(ctx);
+	global_ctx->mmp_update_thread = 0;
+	e2fsck_pass1_block_map_w_unlock(ctx);
+#endif
+}
+
 static void pass1_readahead(e2fsck_t ctx, dgrp_t *group, ext2_ino_t *next_ino)
 {
 	ext2_ino_t inodes_in_group = 0, inodes_per_block, inodes_per_buffer;
@@ -1511,7 +1571,7 @@ void e2fsck_pass1_run(e2fsck_t ctx)
 	dgrp_t		ra_group = 0;
 	struct ea_quota	ea_ibody_quota;
 	struct process_inode_block *inodes_to_process;
-	int process_inode_count, check_mmp;
+	int process_inode_count;
 	e2fsck_t global_ctx = ctx->global_ctx ? ctx->global_ctx : ctx;
 
 	init_resource_track(&rtrack, ctx->fs->io);
@@ -1675,33 +1735,8 @@ void e2fsck_pass1_run(e2fsck_t ctx)
 #endif
 
 	while (1) {
-		check_mmp = 0;
 		e2fsck_pass1_check_lock(ctx);
-#ifdef	HAVE_PTHREAD
-		if (!global_ctx->mmp_update_thread) {
-			e2fsck_pass1_block_map_w_lock(ctx);
-			if (!global_ctx->mmp_update_thread) {
-				global_ctx->mmp_update_thread =
-					ctx->thread_info.et_thread_index + 1;
-				check_mmp = 1;
-			}
-			e2fsck_pass1_block_map_w_unlock(ctx);
-		}
-
-		/* only one active thread could update mmp block. */
-		e2fsck_pass1_block_map_r_lock(ctx);
-		if (global_ctx->mmp_update_thread ==
-		    ctx->thread_info.et_thread_index + 1)
-			check_mmp = 1;
-		e2fsck_pass1_block_map_r_unlock(ctx);
-#else
-		check_mmp = 1;
-#endif
-
-		if (check_mmp && (ino % (fs->super->s_inodes_per_group * 4) == 1)) {
-			if (e2fsck_mmp_update(fs))
-				fatal_error(ctx, 0);
-		}
+		pass1_update_mmp_enter(ctx, ino);
 		old_op = ehandler_operation(eop_next_inode);
 		pctx.errcode = ext2fs_get_next_inode_full(scan, &ino,
 							  inode, inode_size);
@@ -2458,13 +2493,7 @@ endit:
 		print_resource_track(ctx, _("Pass 1"), &rtrack, ctx->fs->io);
 	else
 		ctx->invalid_bitmaps++;
-#ifdef	HAVE_PTHREAD
-	/* reset update_thread after this thread exit */
-	e2fsck_pass1_block_map_w_lock(ctx);
-	if (check_mmp)
-		global_ctx->mmp_update_thread = 0;
-	e2fsck_pass1_block_map_w_unlock(ctx);
-#endif
+	pass1_update_mmp_exit(ctx);
 }
 
 #ifdef HAVE_PTHREAD
