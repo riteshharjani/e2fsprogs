@@ -2436,7 +2436,6 @@ void e2fsck_pass1_run(e2fsck_t ctx)
 	}
 
 	ctx->flags |= E2F_FLAG_ALLOC_OK;
-	ext2fs_free_mem(&inodes_to_process);
 endit:
 	e2fsck_use_inode_shortcuts(ctx, 0);
 	ext2fs_free_mem(&inodes_to_process);
